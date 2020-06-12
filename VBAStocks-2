@@ -1,1 +1,295 @@
+Sub VBAStocksFinal():
+
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Worksheets(1)
+
+    Dim LastColWBSumm As Integer
+    LastColWBSumm = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+
+'Add Workbook Summary Worksheet
+    If ws.Name <> "Workbook Summary" Then
+        Sheets.Add(Before:=ws).Name = "Workbook Summary"
+        
+    End If
+
+'Create Workbook Summary Table
+    If Sheets("Workbook Summary").Cells(1, LastColWBSumm).Value = "Year" Then
+        
+    Else
+    
+    'Create Workbook Summary Challenge 1 Table
+        Sheets("Workbook Summary").Cells(2, 1).Value = "Greatest % Increase"
+        Sheets("Workbook Summary").Cells(3, 1).Value = "Greatest % Decrease"
+        Sheets("Workbook Summary").Cells(4, 1).Value = "Greatest Total Volume"
+        Sheets("Workbook Summary").Cells(1, 2).Value = "Ticker"
+        Sheets("Workbook Summary").Cells(1, 3).Value = "Value"
+        Sheets("Workbook Summary").Cells(1, 4).Value = "Year"
+      
+    End If
+    
+    Dim ws_count As Integer
+    ws_count = ActiveWorkbook.Worksheets.Count
+
+'Loop for worksheets
+For iws = 2 To ws_count
+
+    Set ws = ThisWorkbook.Worksheets(iws)
+
+    Dim LastCol As Integer
+    LastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+
+'Create Summary Table
+    If ws.Cells(1, LastCol + 2).Value = "Ticker" Or ws.Cells(1, LastCol).Value = "Total Stock Volume" Or ws.Cells(1, LastCol).Value = "Value" Then
+        
+    Else
+        ws.Cells(1, LastCol + 2).Value = "Ticker"
+        ws.Cells(1, LastCol + 3).Value = "Year"
+        ws.Cells(1, LastCol + 4).Value = "Yearly Change"
+        ws.Cells(1, LastCol + 5).Value = "Percent Change"
+        ws.Cells(1, LastCol + 6).Value = "Total Stock Volume"
+    
+    'Create Challenge 1 Table
+        ws.Cells(2, LastCol + 8).Value = "Greatest % Increase"
+        ws.Cells(3, LastCol + 8).Value = "Greatest % Decrease"
+        ws.Cells(4, LastCol + 8).Value = "Greatest Total Volume"
+        ws.Cells(1, LastCol + 9).Value = "Ticker"
+        ws.Cells(1, LastCol + 10).Value = "Value"
+    
+    End If
+    
+    Dim Ticker As String
+
+    Dim TickerCol As Integer
+    TickerCol = ws.Columns(9).Column
+
+    Dim YRCol As Integer
+    YRCol = ws.Columns(10).Column
+
+    Dim YCCol As Integer
+    YCCol = ws.Columns(11).Column
+
+    Dim PCCol As Integer
+    PCCol = ws.Columns(12).Column
+
+    Dim TSVCol As Integer
+    TSVCol = ws.Columns(13).Column
+
+    Dim LastRow As Long
+    LastRow = ws.Cells(Rows.Count, 1).End(xlUp).Row
+
+    Dim LastRowSum As Integer
+    LastRowSum = ws.Cells(Rows.Count, TickerCol).End(xlUp).Row
+
+    Dim StockVolume As Double
+    StockVolume = 0
+
+    Dim StkPrcO As Double
+    Dim StkPrcC As Double
+
+    Dim percentchange As Double
+ 
+    'Sort main data by Ticker then Date
+        ws.Range("A1:G" & LastRow).Sort Key1:=ws.Range("A1"), Order1:=xlAscending, Key2:=ws.Range("B1"), Order2:=xlAscending, Header:=xlYes
+ 
+    'Sort Summary data by Ticker then Year
+        ws.Range("I2:M" & LastRowSum).Sort Key1:=ws.Range("I1"), Order1:=xlAscending, Key2:=ws.Range("J1"), Order2:=xlAscending, Header:=xlYes
+
+    For I = 2 To LastRow
+
+        If ws.Cells(I + 1, 1).Value <> ws.Cells(I, 1).Value Or Left(ws.Cells(I, 2).Value, 4) <> Left(ws.Cells(I + 1, 2).Value, 4) Then
+                        
+            'Year closing stock price
+                StkPrcC = ws.Cells(I, 6).Value
+                
+            'Year for Stock Prices
+                      
+            'Check Summary Table for Existing Ticker Names
+                For isum = 1 To LastRowSum
+                    If ws.Cells(isum, TickerCol).Value = ws.Cells(I, 1).Value And Left(ws.Cells(isum, YRCol).Value, 4) = Left(ws.Cells(I, 2).Value, 4) Then
+                Exit For
+                    ElseIf isum <> LastRowSum Then
+                    Else
+                'Add Ticker Name with Year to Summary Table
+                    ws.Cells(LastRowSum + 1, TickerCol).Value = ws.Cells(I, 1).Value
+                    ws.Cells(LastRowSum + 1, YRCol).Value = Left(ws.Cells(I, 2).Value, 4)
+                'Calculate Final Stock Volume for Ticker
+                    StockVolume = StockVolume + ws.Cells(I, 7).Value
+                'Add Stock Volume to Summary Table
+                    ws.Cells(LastRowSum + 1, TSVCol).Value = StockVolume
+                'Calculate Yearly Change
+                    ws.Cells(LastRowSum + 1, YCCol).Value = (StkPrcC - StkPrcO)
+                'Calculate Percent Change
+                    If StkPrcO <> 0 Then
+                    percentchange = (StkPrcC - StkPrcO) / StkPrcO
+                    Else
+                    percentchange = "0"
+                    End If
+                    ws.Cells(LastRowSum + 1, PCCol).Value = percentchange
+                    ws.Cells(LastRowSum + 1, PCCol).Style = "Percent"
+                    End If
+                Next isum
+       
+            'Index Last Row for Summary Table by 1
+                LastRowSum = LastRowSum + 1
+            'Reset StockVolume to 0
+                StockVolume = 0
+        
+        Else
+            
+            'Check if it's the first row for the Ticker and use for Year Opening Stock Price
+                If ws.Cells(I - 1, 1).Value <> ws.Cells(I, 1).Value Then
+                StkPrcO = ws.Cells(I, 3).Value
+                End If
+    
+            'Add Stock Volume for Ticker
+                StockVolume = StockVolume + ws.Cells(I, 7).Value
+
+        End If
+     
+     Next I
+     
+'Format Summary Column Width
+    ws.Columns().AutoFit
+
+    
+'Format Yearly Change Cell Colour
+    For I = 2 To LastRowSum
+    
+        If ws.Cells(I, YCCol).Value < 0 Then
+        ws.Cells(I, YCCol).Interior.ColorIndex = 3
+        
+        ElseIf ws.Cells(I, YCCol).Value > 0 Then
+        ws.Cells(I, YCCol).Interior.ColorIndex = 4
+        
+        End If
+        
+    Next I
+    
+'Challenge 1 Greatest Ticker Increase, Decrease and Volume
+
+    Dim LastCol2 As Integer
+    LastCol2 = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+
+'Find Greatest Increase
+    Dim GI As Double
+    GI = 0
+    Dim GIT As String
+    Dim GIYR As Integer
+
+    For isum = 2 To LastRowSum
+    
+        If ws.Cells(isum, PCCol).Value > GI Then
+        GI = ws.Cells(isum, PCCol).Value
+        GIT = ws.Cells(isum, TickerCol).Value
+        GIYR = ws.Cells(isum, YRCol).Value
+        Else
+        End If
+    
+    Next isum
+
+    ws.Cells(2, LastCol2 - 1).Value = GIT
+    ws.Cells(2, LastCol2).Value = GI
+
+    ws.Cells(2, LastCol2).Style = "Percent"
+
+'Find Greatest Decrease
+    Dim GD As Double
+    GD = 0
+    Dim GDT As String
+    Dim GDYR As String
+
+    For isum = 2 To LastRowSum
+    
+        If ws.Cells(isum, PCCol).Value < GD Then
+        GD = ws.Cells(isum, PCCol).Value
+        GDT = ws.Cells(isum, TickerCol).Value
+        GDYR = ws.Cells(isum, YRCol).Value
+        Else
+        End If
+    
+    Next isum
+
+    ws.Cells(3, LastCol2 - 1).Value = GDT
+    ws.Cells(3, LastCol2).Value = GD
+
+    ws.Cells(3, LastCol2).Style = "Percent"
+
+'Find Greatest Volume
+    Dim GV As Double
+    GV = 0
+    Dim GVT As String
+    Dim GVYR As Integer
+
+    For isum = 2 To LastRowSum
+    
+        If ws.Cells(isum, TSVCol).Value > GV Then
+        GV = ws.Cells(isum, TSVCol).Value
+        GVT = ws.Cells(isum, TickerCol).Value
+        GVYR = ws.Cells(isum, YRCol).Value
+        Else
+        End If
+    
+    Next isum
+
+    ws.Cells(4, LastCol2 - 1).Value = GVT
+    ws.Cells(4, LastCol2).Value = GV
+
+'Format Greatest Summary Column Width
+    ws.Columns().AutoFit
+    
+'Find Greatest Increase for All Worksheets
+    Dim GIWB As Double
+    Dim GITWB As String
+    Dim GIYRWB As Integer
+
+    If GI > GIWB Then
+    GIWB = GI
+    GITWB = GIT
+    GIYRWB = GIYR
+    End If
+    
+'Find Greatest Decrease for All Worksheets
+    Dim GDWB As Double
+    Dim GDTWB As String
+    Dim GDYRWB As Integer
+
+    If GD < GDWB Then
+    GDWB = GD
+    GDTWB = GDT
+    GDYRWB = GDYR
+    End If
+    
+'Find Greatest Volume for All Worksheets
+    Dim GVWB As Double
+    Dim GVTWB As String
+    Dim GVYRWB As Integer
+
+    If GV > GVWB Then
+    GVWB = GV
+    GVTWB = GVT
+    GVYRWB = GVYR
+    End If
+    
+'Add Values to Workbook Summary Worksheet
+    Sheets("Workbook Summary").Cells(2, 2).Value = GITWB
+    Sheets("Workbook Summary").Cells(2, 3).Value = GIWB
+    Sheets("Workbook Summary").Cells(2, 3).Style = "Percent"
+    Sheets("Workbook Summary").Cells(2, 4).Value = GIYRWB
+    Sheets("Workbook Summary").Cells(3, 2).Value = GDTWB
+    Sheets("Workbook Summary").Cells(3, 3).Value = GDWB
+    Sheets("Workbook Summary").Cells(3, 3).Style = "Percent"
+    Sheets("Workbook Summary").Cells(3, 4).Value = GDYRWB
+    Sheets("Workbook Summary").Cells(4, 2).Value = GVTWB
+    Sheets("Workbook Summary").Cells(4, 3).Value = GVWB
+    Sheets("Workbook Summary").Cells(4, 4).Value = GVYRWB
+
+'Format Greatest Summary Column Width
+    Sheets("Workbook Summary").Columns().AutoFit
+
+Next iws
+
+
+End Sub
+
+
 
